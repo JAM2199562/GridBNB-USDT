@@ -15,10 +15,11 @@ import sqlite3
 import os
 
 class SimpleGridBacktest:
-    def __init__(self, initial_capital=10000):
+    def __init__(self, initial_capital=10000, initial_position_ratio=0.5):
         self.initial_capital = initial_capital
+        self.initial_position_ratio = initial_position_ratio  # 初始持仓比例
         self.cash = initial_capital
-        self.base_amount = 0  # BNB数量
+        self.base_amount = 0  # BNB数量，将在初始化时设置
         self.symbol = "BNB/USDT"
         
         # 策略参数 - 复制EBOLABOY的逻辑
@@ -509,6 +510,16 @@ class SimpleGridBacktest:
         self.base_price = data[0][4]  # 第一个收盘价
         print(f"📍 初始基准价格: ${self.base_price:.2f}")
         
+        # 设置初始持仓 - 模拟原始策略的资产分配
+        if self.initial_position_ratio > 0:
+            initial_base_value = self.initial_capital * self.initial_position_ratio
+            self.base_amount = initial_base_value / self.base_price
+            self.cash = self.initial_capital - initial_base_value
+            print(f"💼 初始持仓: {self.base_amount:.4f} {self.symbol.split('/')[0]} (${initial_base_value:.2f})")
+            print(f"💰 剩余现金: ${self.cash:.2f}")
+        else:
+            print("💰 纯现金启动")
+        
         # 初始化价格历史
         for i in range(min(100, len(data))):
             self.price_history.append(data[i][4])
@@ -738,6 +749,7 @@ async def main():
     use_cache = True
     initial_capital = 10000
     days = 180  # 默认6个月
+    initial_position_ratio = 0.5  # 默认50%初始持仓
     
     if len(sys.argv) > 1:
         for arg in sys.argv[1:]:
@@ -756,6 +768,8 @@ async def main():
                 initial_capital = float(arg.split('=')[1])
             elif arg.startswith('--days='):
                 days = int(arg.split('=')[1])
+            elif arg.startswith('--position='):
+                initial_position_ratio = float(arg.split('=')[1])
             elif arg == '--help':
                 print("""
 🎯 简单网格回测工具
@@ -766,19 +780,20 @@ async def main():
 选项:
   --capital=10000     设置初始资金 (默认: 10000)
   --days=180          设置回测天数 (默认: 180天/6个月)
+  --position=0.5      设置初始持仓比例 (默认: 0.5即50%)
   --no-cache          不使用缓存，强制从交易所获取数据
   --clear-cache       清空所有缓存数据
   --cache-info        显示缓存信息
   --help              显示此帮助信息
 
 示例:
-  python simple_grid_backtest.py --capital=5000 --days=365
-  python simple_grid_backtest.py --days=90 --no-cache
+  python simple_grid_backtest.py --capital=5000 --days=365 --position=0.3
+  python simple_grid_backtest.py --days=90 --position=0 --no-cache
   python simple_grid_backtest.py --cache-info
                 """)
                 return
     
-    backtest = SimpleGridBacktest(initial_capital=initial_capital)
+    backtest = SimpleGridBacktest(initial_capital=initial_capital, initial_position_ratio=initial_position_ratio)
     
     # 显示回测参数
     period_desc = f"{days}天"
