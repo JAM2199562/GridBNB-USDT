@@ -749,7 +749,7 @@ async def main():
     use_cache = True
     initial_capital = 10000
     days = 180  # 默认6个月
-    initial_position_ratio = 0.5  # 默认50%初始持仓
+    initial_position_ratio = 0.16  # 默认16%初始持仓，符合原始策略
     
     if len(sys.argv) > 1:
         for arg in sys.argv[1:]:
@@ -780,14 +780,14 @@ async def main():
 选项:
   --capital=10000     设置初始资金 (默认: 10000)
   --days=180          设置回测天数 (默认: 180天/6个月)
-  --position=0.5      设置初始持仓比例 (默认: 0.5即50%)
+  --position=0.16     设置初始持仓比例 (默认: 0.16即16%，符合原始策略)
   --no-cache          不使用缓存，强制从交易所获取数据
   --clear-cache       清空所有缓存数据
   --cache-info        显示缓存信息
   --help              显示此帮助信息
 
 示例:
-  python simple_grid_backtest.py --capital=5000 --days=365 --position=0.3
+  python simple_grid_backtest.py --capital=5000 --days=365 --position=0.16
   python simple_grid_backtest.py --days=90 --position=0 --no-cache
   python simple_grid_backtest.py --cache-info
                 """)
