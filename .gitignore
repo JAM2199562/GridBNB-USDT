@@ -125,3 +125,5 @@ data/
 *.exe.stackdump
 
 update_git.ps1
+backtest_cache.db
+grid_backtest_results.json
