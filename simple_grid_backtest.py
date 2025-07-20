@@ -393,8 +393,7 @@ class SimpleGridBacktest:
         else:
             if self.is_monitoring_buy:
                 self.is_monitoring_buy = False
-                self.highest = None
-                self.lowest = None
+                self._reset_extremes()
         
         return False
     
@@ -417,8 +416,7 @@ class SimpleGridBacktest:
         else:
             if self.is_monitoring_sell:
                 self.is_monitoring_sell = False
-                self.highest = None
-                self.lowest = None
+                self._reset_extremes()
         
         return False
     
@@ -518,9 +516,16 @@ class SimpleGridBacktest:
         last_adjust_time = 0
         
         # 遍历历史数据
+        min_price = float('inf')
+        max_price = 0
+        
         for i, candle in enumerate(data):
             timestamp = datetime.fromtimestamp(candle[0] / 1000)
             price = candle[4]  # 收盘价
+            
+            # 记录价格范围
+            min_price = min(min_price, price)
+            max_price = max(max_price, price)
             
             # 更新价格历史
             self.price_history.append(price)
@@ -531,6 +536,10 @@ class SimpleGridBacktest:
             if candle[0] - last_adjust_time > 24 * 3600 * 1000:
                 self.adjust_grid_size()
                 last_adjust_time = candle[0]
+            
+            # 计算当前网格边界
+            upper_band = self.base_price * (1 + self.grid_size / 100)
+            lower_band = self.base_price * (1 - self.grid_size / 100)
             
             # 检查交易信号
             if self.check_sell_signal(price):
@@ -594,6 +603,18 @@ class SimpleGridBacktest:
                 max_drawdown = drawdown
         
         print(f"最大回撤: {max_drawdown:.2f}%")
+        
+        # 显示价格分析
+        print(f"价格范围: ${min_price:.2f} - ${max_price:.2f}")
+        price_range_pct = (max_price - min_price) / self.base_price * 100
+        print(f"价格波动幅度: {price_range_pct:.2f}% (相对基准价)")
+        
+        final_upper_band = self.base_price * (1 + self.grid_size / 100)
+        final_lower_band = self.base_price * (1 - self.grid_size / 100)
+        print(f"最终网格: 上轨 ${final_upper_band:.2f} | 下轨 ${final_lower_band:.2f} | 网格大小 {self.grid_size:.2f}%")
+        
+        if max_price < final_upper_band and min_price > final_lower_band:
+            print("⚠️  价格始终在网格范围内，未触发交易条件")
         
         # 保存详细结果
         self.save_results()
