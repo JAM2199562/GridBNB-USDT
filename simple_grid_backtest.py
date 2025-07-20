@@ -81,6 +81,11 @@ class SimpleGridBacktest:
         """复制原始的FLIP_THRESHOLD逻辑"""
         return grid_size / 100 / 5  # 网格大小的1/5
     
+    def _reset_extremes(self):
+        """重置极值 - 复制原始策略逻辑"""
+        self.highest = None
+        self.lowest = None
+    
     async def fetch_historical_data(self, days=180, use_cache=True):
         """获取指定天数的历史数据（支持智能缓存补全）"""
         print("📈 获取历史数据...")
@@ -432,17 +437,26 @@ class SimpleGridBacktest:
         self.cash -= trade_amount
         self.base_amount += buy_quantity
         
+        # 【关键】更新基准价格 - 复制原始策略逻辑
+        old_base_price = self.base_price
+        self.base_price = price
+        
+        # 重置极值（但不重置监测状态）- 完全复制原始逻辑
+        self._reset_extremes()
+        
         trade = {
             'timestamp': timestamp,
             'type': 'buy',
             'price': price,
             'quantity': buy_quantity,
             'amount': trade_amount,
-            'total_value': self.cash + self.base_amount * price
+            'total_value': self.cash + self.base_amount * price,
+            'old_base_price': old_base_price,
+            'new_base_price': self.base_price
         }
         self.trades.append(trade)
         
-        print(f"🟢 买入: ${trade_amount:.2f} @ ${price:.2f} | 持仓: {self.base_amount:.4f} BNB")
+        print(f"🟢 买入: ${trade_amount:.2f} @ ${price:.2f} | 持仓: {self.base_amount:.4f} | 基准价: ${old_base_price:.2f} -> ${self.base_price:.2f} | {timestamp.strftime('%Y-%m-%d %H:%M')}")
         return True
     
     def execute_sell(self, price, timestamp):
@@ -461,17 +475,26 @@ class SimpleGridBacktest:
         self.cash += sell_amount
         self.base_amount -= sell_quantity
         
+        # 【关键】更新基准价格 - 复制原始策略逻辑
+        old_base_price = self.base_price
+        self.base_price = price
+        
+        # 重置极值（但不重置监测状态）- 完全复制原始逻辑
+        self._reset_extremes()
+        
         trade = {
             'timestamp': timestamp,
             'type': 'sell',
             'price': price,
             'quantity': sell_quantity,
             'amount': sell_amount,
-            'total_value': self.cash + self.base_amount * price
+            'total_value': self.cash + self.base_amount * price,
+            'old_base_price': old_base_price,
+            'new_base_price': self.base_price
         }
         self.trades.append(trade)
         
-        print(f"🔴 卖出: ${sell_amount:.2f} @ ${price:.2f} | 持仓: {self.base_amount:.4f} BNB")
+        print(f"🔴 卖出: ${sell_amount:.2f} @ ${price:.2f} | 持仓: {self.base_amount:.4f} | 基准价: ${old_base_price:.2f} -> ${self.base_price:.2f} | {timestamp.strftime('%Y-%m-%d %H:%M')}")
         return True
     
     async def run_backtest(self, days=180, use_cache=True):
